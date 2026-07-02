@@ -1,0 +1,6 @@
+{
+  "name": "Lumé Pudim",
+  "description": "Sistema de gestão completo para confeitaria Lumé Pudim: controle de custos, fichas técnicas, PDV de vendas, CMV, estoque e financeiro com inteligência artificial.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
