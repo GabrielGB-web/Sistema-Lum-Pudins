@@ -301,38 +301,38 @@ export default function App() {
     const saleToDelete = sales.find(s => s.id === saleId);
     if (!saleToDelete) return;
 
-    // Remover a venda do estado local
-    setSales(prev => prev.filter(s => s.id !== saleId));
+    // Calcular o estoque estornado sincronamente antes de atualizar os estados e o Supabase
+    let updatedIngredients = [...ingredients];
 
-    // Estornar estoque dos insumos (local)
-    let updatedIngredients: Ingredient[] = [];
-    setIngredients(prevIngredients => {
-      updatedIngredients = [...prevIngredients];
+    saleToDelete.items.forEach(soldItem => {
+      const recipeObj = recipes.find(r => r.id === soldItem.recipeId);
+      if (!recipeObj) return;
 
-      saleToDelete.items.forEach(soldItem => {
-        const recipeObj = recipes.find(r => r.id === soldItem.recipeId);
-        if (!recipeObj) return;
-
-        recipeObj.ingredients.forEach(recIng => {
-          const totalQtyUsed = recIng.quantity * soldItem.quantity;
-          updatedIngredients = updatedIngredients.map(ing => {
-            if (ing.id === recIng.ingredientId) {
-              const newStock = ing.currentStock + totalQtyUsed;
-              return { ...ing, currentStock: newStock };
-            }
-            return ing;
-          });
+      recipeObj.ingredients.forEach(recIng => {
+        const totalQtyUsed = recIng.quantity * soldItem.quantity;
+        updatedIngredients = updatedIngredients.map(ing => {
+          if (ing.id === recIng.ingredientId) {
+            const newStock = ing.currentStock + totalQtyUsed;
+            return { ...ing, currentStock: newStock };
+          }
+          return ing;
         });
       });
-
-      return updatedIngredients;
     });
+
+    // Atualizar estados locais de imediato
+    setSales(prev => prev.filter(s => s.id !== saleId));
+    setIngredients(updatedIngredients);
 
     if (supabaseStatus === 'connected') {
       try {
         const supabase = getSupabase();
         // Deletar do banco
-        await supabase.from('sales').delete().eq('id', saleId);
+        const { error: deleteError } = await supabase.from('sales').delete().eq('id', saleId);
+        if (deleteError) {
+          console.error('Erro ao deletar venda do Supabase:', deleteError);
+          return;
+        }
         
         // Sincronizar os estoques atualizados no Supabase
         await Promise.all(
